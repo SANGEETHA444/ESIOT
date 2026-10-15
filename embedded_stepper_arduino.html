@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Embedded Systems Overview &amp; Arduino–Stepper Motor Interfacing</title>
+<style>
+:root{--ink:#14232b;--bg:#f6f8f7;--card:#fff;--ac:#0b6e68;--hi:#c9871a;--ok:#1c7a3b;--bad:#b3261e;--ln:#d5dedb}
+*{box-sizing:border-box}body{margin:0;font:16px/1.6 "Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--ink);color:#eaf4f1;padding:28px 5vw}header h1{margin:0 0 6px;font:700 clamp(1.5rem,4vw,2.3rem)/1.2 Georgia,serif}
+header p{margin:4px 0;max-width:80ch;color:#b9d2cc}
+nav{position:sticky;top:0;background:#fff;border-bottom:2px solid var(--ac);display:flex;flex-wrap:wrap;gap:2px 14px;padding:8px 5vw;z-index:5;font-size:.88rem}
+nav a{color:var(--ac);text-decoration:none;font-weight:600}nav a:hover{text-decoration:underline}
+main{max-width:1000px;margin:auto;padding:10px 5vw 50px}section{margin:34px 0;scroll-margin-top:60px}
+h2{font:700 1.5rem Georgia,serif;border-bottom:2px solid var(--ln);padding-bottom:4px;color:var(--ac)}h3{margin:18px 0 6px}
+.card{background:var(--card);border:1px solid var(--ln);border-left:4px solid var(--ac);padding:12px 16px;margin:12px 0}
+.key{border-left-color:var(--hi);background:#fff8ec}.eq{font:1.05rem Cambria,"Times New Roman",serif;background:#eef5f3;padding:8px 14px;margin:8px 0;overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.93rem;margin:10px 0}th,td{border:1px solid var(--ln);padding:6px 9px;text-align:left}th{background:#e3eeeb}
+.tw{overflow-x:auto}svg{max-width:100%;height:auto;background:#fff;border:1px solid var(--ln)}pre{background:#101c22;color:#d8f0ea;padding:12px;overflow-x:auto;font-size:.85rem}
+button{background:var(--ac);color:#fff;border:0;padding:8px 14px;border-radius:4px;font:600 .9rem inherit;cursor:pointer;margin:4px 6px 4px 0}button.s{background:#5b6f6a}button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--hi)}
+.q{background:var(--card);border:1px solid var(--ln);padding:10px 14px;margin:10px 0}.q label{display:block;padding:2px 0;cursor:pointer}
+.tag{font-size:.75rem;background:#e3eeeb;padding:1px 7px;border-radius:9px;margin-left:6px}.exp{margin-top:6px;font-size:.92rem}
+.q.c{border-left:5px solid var(--ok)}.q.w{border-left:5px solid var(--bad)}.q.u{border-left:5px solid var(--hi)}
+details{background:var(--card);border:1px solid var(--ln);margin:8px 0;padding:8px 14px}summary{cursor:pointer;font-weight:600}
+.score{font-weight:700;font-size:1.1rem;margin:8px 0}input[type=number]{width:110px;padding:5px}
+@media print{nav,button{display:none}body{background:#fff}details{display:block}details>*{display:block}.q{break-inside:avoid}}
+</style></head><body>
+<header><h1>Embedded Systems Overview &amp; Interfacing Arduino with a Stepper Motor</h1>
+<p><b>Subject:</b> Embedded Systems &nbsp; <b>Unit:</b> Embedded fundamentals and motor interfacing &nbsp; <b>Level:</b> B.E./B.Tech ECE, GATE, core-company interviews</p>
+<p><b>Learning objectives:</b> (1) define embedded systems and their specialties; (2) wire an Arduino Uno to a 28BYJ-48 stepper through a ULN2003 driver; (3) generate step sequences and compute speed, delay and resolution; (4) solve GATE and interview-style problems.</p></header>
+<nav><a href="#intro">Introduction</a><a href="#spec">Specialties</a><a href="#circuit">Circuit</a><a href="#work">Working</a><a href="#wave">Waveforms</a><a href="#eq">Equations</a><a href="#num">Solved problems</a><a href="#gate">GATE</a><a href="#intv">Interview</a><a href="#app">Applications</a><a href="#quiz">Topic quiz</a><a href="#rev">Revision</a></nav>
+<main>
+<section id="intro"><h2>1. Introduction and objectives</h2>
+<div class="card"><b>Definition.</b> An <b>embedded system</b> is a computer (microcontroller, SoC or DSP plus firmware) built into a larger product to perform one dedicated function, usually under real-time, power, size and cost constraints.</div>
+<p><b>Principle:</b> sensors → processor running firmware → actuators/communication. An <b>Arduino Uno</b> (ATmega328P, 16 MHz, 5 V logic) is a beginner-friendly embedded board. A <b>stepper motor</b> converts digital pulses into fixed angular steps, so position is controlled by counting pulses.</p>
+<p><b>Prerequisites:</b> digital logic, transistor switching, inductors and back-EMF, basic C. <b>Terms:</b> <i>step angle</i>, <i>steps/rev</i>, <i>full-step</i>, <i>half-step</i>, <i>microstepping</i>, <i>holding torque</i>, <i>open-loop control</i>, <i>flyback diode</i>.</p>
+<h3>Stepper types</h3><div class="tw"><table><tr><th>Type</th><th>Construction</th><th>Notes</th></tr><tr><td>Permanent magnet (PM)</td><td>Magnet rotor</td><td>Coarse steps (7.5°–15°), cheap</td></tr><tr><td>Variable reluctance (VR)</td><td>Toothed iron rotor</td><td>No holding torque when unpowered</td></tr><tr><td>Hybrid</td><td>PM + toothed rotor</td><td>1.8°/step (200 steps/rev), most common in 3D printers/CNC</td></tr></table></div>
+<p>By winding: <b>unipolar</b> (centre-tapped, 5/6 wires, e.g. 28BYJ-48) and <b>bipolar</b> (4 wires, needs H-bridge, e.g. A4988/DRV8825).</p></section>
+
+<section id="spec"><h2>2. Overview and specialties of embedded systems</h2>
+<div class="tw"><table><tr><th>Specialty</th><th>Meaning</th><th>Example</th></tr>
+<tr><td>Dedicated function</td><td>Does one task repeatedly</td><td>Washing-machine controller</td></tr>
+<tr><td>Real-time operation</td><td>Output must meet deadlines (hard/soft)</td><td>Airbag, ABS, stepper pulse timing</td></tr>
+<tr><td>Resource constrained</td><td>Small RAM/flash (Uno: 2 KB SRAM, 32 KB flash), low power</td><td>Wearables</td></tr>
+<tr><td>Reliability and watchdog</td><td>Must run unattended for years; watchdog resets on hang</td><td>Pacemaker, routers</td></tr>
+<tr><td>Tight HW–SW integration</td><td>Firmware directly controls peripherals (GPIO, timers, ADC)</td><td>Motor drive</td></tr>
+<tr><td>Reactive</td><td>Responds to sensor events and interrupts</td><td>Thermostat</td></tr>
+<tr><td>Cost and size optimised</td><td>Mass-produced; each cent counts</td><td>Remote controls</td></tr></table></div>
+<p><b>Classification:</b> by performance (small/medium/sophisticated), by timing (real-time vs non-real-time) and by complexity (standalone, networked, mobile). <b>Common misconception:</b> “embedded = Arduino”. Arduino is a prototyping platform; products use bare MCUs/SoCs with custom PCBs.</p></section>
+
+<section id="circuit"><h2>3. Circuit diagram: Arduino Uno → ULN2003 → 28BYJ-48</h2>
+<svg viewBox="0 0 760 330" role="img" aria-label="Arduino to ULN2003 to stepper wiring" font-family="Arial" font-size="13">
+<rect x="20" y="30" width="170" height="240" fill="#e6f2ef" stroke="#0b6e68" stroke-width="2"/><text x="105" y="55" text-anchor="middle" font-weight="bold">Arduino Uno</text>
+<rect x="300" y="30" width="170" height="240" fill="#fdf1dc" stroke="#c9871a" stroke-width="2"/><text x="385" y="55" text-anchor="middle" font-weight="bold">ULN2003 driver</text>
+<rect x="590" y="60" width="150" height="150" rx="75" fill="#eef" stroke="#335" stroke-width="2"/><text x="665" y="125" text-anchor="middle" font-weight="bold">28BYJ-48</text><text x="665" y="143" text-anchor="middle">5 V unipolar</text>
+<g stroke="#14232b" stroke-width="1.6"><line x1="190" y1="85" x2="300" y2="85"/><line x1="190" y1="115" x2="300" y2="115"/><line x1="190" y1="145" x2="300" y2="145"/><line x1="190" y1="175" x2="300" y2="175"/>
+<line x1="470" y1="85" x2="590" y2="85"/><line x1="470" y1="115" x2="590" y2="115"/><line x1="470" y1="145" x2="590" y2="145"/><line x1="470" y1="175" x2="590" y2="175"/>
+<line x1="190" y1="240" x2="300" y2="240" stroke="#000" stroke-width="2.4"/><line x1="470" y1="215" x2="590" y2="215" stroke="#b3261e" stroke-width="2.4"/><line x1="385" y1="270" x2="385" y2="305" stroke="#000"/></g>
+<g text-anchor="start"><text x="195" y="80">D8</text><text x="195" y="110">D9</text><text x="195" y="140">D10</text><text x="195" y="170">D11</text><text x="195" y="235">GND</text>
+<text x="305" y="90">IN1</text><text x="305" y="120">IN2</text><text x="305" y="150">IN3</text><text x="305" y="180">IN4</text><text x="305" y="245">GND (−)</text><text x="305" y="205">+ 5 V in</text>
+<text x="430" y="80">OUT1</text><text x="430" y="110">OUT2</text><text x="430" y="140">OUT3</text><text x="430" y="170">OUT4</text><text x="500" y="210" fill="#b3261e">red: +5 V common</text><text x="330" y="322">External 5 V supply (−) tied to Arduino GND</text></g></svg>
+<p><i>Figure 1: Illustrative wiring (not a simulation screenshot; none was supplied).</i> Pin map: D8→IN1, D9→IN2, D10→IN3, D11→IN4. Motor connector plugs into the driver socket; the red wire is the 5 V centre tap. Power the driver from a separate 5 V supply and join grounds.</p>
+<div class="tw"><table><tr><th>Component</th><th>Function</th></tr><tr><td>Arduino Uno</td><td>Generates the 4-bit step pattern on GPIO</td></tr><tr><td>ULN2003 (7 Darlington pairs)</td><td>Sinks up to 500 mA per channel; GPIO only drives its base. Has built-in clamp diodes for inductive kick</td></tr><tr><td>28BYJ-48</td><td>4 coils (~50 Ω, ≈100 mA each at 5 V), 1:64 gearbox, 2048 full-steps/rev at the output shaft</td></tr><tr><td>External 5 V supply</td><td>Supplies motor current so the Arduino regulator is not overloaded</td></tr></table></div>
+<h3>Arduino sketch</h3><pre>#include &lt;Stepper.h&gt;
+const int SPR = 2048;                 // full steps per revolution
+Stepper myStepper(SPR, 8, 10, 9, 11); // IN1, IN3, IN2, IN4 order
+void setup() { myStepper.setSpeed(10); }   // RPM (keep ≤ ~15)
+void loop() {
+  myStepper.step(SPR);  delay(1000);       // one revolution CW
+  myStepper.step(-SPR); delay(1000);       // one revolution CCW
+}</pre></section>
+
+<section id="work"><h2>4. Working principle</h2>
+<ol><li>Firmware energises coils in a repeating sequence; the rotor aligns with each energised stator pole.</li><li>Each output pin turns a Darlington transistor on, grounding that coil end; current flows from +5 V through the coil.</li><li>When a coil is switched off, its stored energy <i>L·di/dt</i> creates a voltage spike; the ULN2003 clamp diodes absorb it.</li><li>Reversing the sequence reverses rotation. Delay between steps sets speed; step count sets angle.</li></ol>
+<div class="tw"><table><tr><th>Mode</th><th>Pattern</th><th>Effect</th></tr><tr><td>Wave drive</td><td>One coil on at a time</td><td>Lowest torque and current</td></tr><tr><td>Full step</td><td>Two coils on</td><td>Higher torque (≈1.4×)</td></tr><tr><td>Half step</td><td>1, 2, 1, 2 coils alternating</td><td>Double resolution, smoother</td></tr><tr><td>Microstep</td><td>PWM-shaped coil currents (A4988/DRV8825)</td><td>Finest resolution; torque per microstep reduced</td></tr></table></div>
+<p><b>DC vs AC view:</b> DC holds the rotor (holding torque, coils stay hot); the switching sequence is the AC drive. <b>Limits:</b> torque falls with speed because coil inductance slows current rise (τ = L/R); excessive step rate causes missed steps. <b>Misconceptions:</b> (a) the Arduino pin cannot drive the motor directly (40 mA absolute max per pin vs ≈100 mA per coil); (b) position is open loop, so errors only appear if steps are lost; (c) a motor that is stationary but energised still draws current.</p></section>
+
+<section id="wave"><h2>5. Waveforms (illustrative)</h2>
+<p>Full-step (two-coil) drive, IN1–IN4 over 8 steps. High = coil energised.</p><div class="tw"><svg id="wf" viewBox="0 0 720 260" font-family="Arial" font-size="12"></svg></div>
+<p><i>Figure 2: Generated illustratively by the page; no simulation output was supplied.</i> Each signal is high for two consecutive steps and is offset by one step from its neighbour; the pattern repeats every four steps.</p>
+<div class="tw"><table><tr><th>Step</th><th>IN1</th><th>IN2</th><th>IN3</th><th>IN4</th></tr><tr><td>1</td><td>1</td><td>1</td><td>0</td><td>0</td></tr><tr><td>2</td><td>0</td><td>1</td><td>1</td><td>0</td></tr><tr><td>3</td><td>0</td><td>0</td><td>1</td><td>1</td></tr><tr><td>4</td><td>1</td><td>0</td><td>0</td><td>1</td></tr></table></div></section>
+
+<section id="eq"><h2>6. Equations</h2>
+<div class="eq">Step angle: θ<sub>s</sub> = 360° / N &nbsp; (N = steps per revolution)</div>
+<div class="eq">Steps for rotation θ: n = θ / θ<sub>s</sub></div>
+<div class="eq">Speed: RPM = (f<sub>step</sub> × 60) / N &nbsp; ⇒ f<sub>step</sub> = RPM × N / 60</div>
+<div class="eq">Delay per step: t<sub>d</sub> = 1 / f<sub>step</sub></div>
+<div class="eq">Microstepping: N<sub>eff</sub> = N × m &nbsp; (m = microsteps per full step)</div>
+<div class="eq">Coil current: I = V / R<sub>coil</sub>; Power: P = I²R (per energised coil)</div>
+<div class="eq">Electrical time constant: τ = L / R</div>
+<p><b>Derivation of speed:</b> f<sub>step</sub> steps per second ÷ N steps per rev = revolutions per second; ×60 gives RPM. Units: f in Hz (steps/s), N dimensionless steps, RPM in rev/min. Valid while the motor tracks each pulse (no stall); limiting case: as f → very high, torque → 0 and steps are lost. Physical meaning: speed is set purely by the pulse rate in open loop.</p>
+<h3>Quick calculator</h3>
+<p>Steps/rev N <input type="number" id="cN" value="2048"> RPM <input type="number" id="cR" value="10"> <button onclick="calc()">Calculate</button></p><div class="card" id="cOut">Press Calculate.</div></section>
+
+<section id="num"><h2>7. Solved numerical problems</h2>
+<div class="card"><b>Problem 1 (easy).</b> A hybrid stepper has θ<sub>s</sub> = 1.8°. Find N and the steps for 90°.<br>Required: N, n. Formula: N = 360°/θ<sub>s</sub>; n = θ/θ<sub>s</sub>.<br>N = 360°/1.8° = <b>200</b> steps/rev; n = 90°/1.8° = <b>50</b> steps.<br><i>Interpretation:</i> a quarter turn needs 50 pulses.</div>
+<div class="card"><b>Problem 2 (moderate).</b> 28BYJ-48 (N = 2048) must run at 10 RPM. Find f<sub>step</sub> and delay.<br>f = RPM·N/60 = 10 × 2048 / 60 = <b>341.33 steps/s</b>; t<sub>d</sub> = 1/341.33 = <b>2.93 ms</b>.<br><i>Interpretation:</i> a delay under about 2 ms (≈ 15 RPM) makes this geared motor skip steps.</div>
+<div class="card"><b>Problem 3 (GATE-style).</b> A 200-step motor uses a driver with 1/16 microstepping and must turn at 60 RPM. Find the pulse frequency.<br>N<sub>eff</sub> = 200 × 16 = 3200. f = 60 × 3200 / 60 = <b>3200 Hz</b>; resolution = 360°/3200 = <b>0.1125°</b>.<br><i>Shortcut:</i> when RPM = 60, f(Hz) equals N<sub>eff</sub> numerically. <i>Interpretation:</i> the Arduino must produce a 3.2 kHz pulse train, easily done with a timer.</div>
+<div class="card"><b>Problem 4 (current check).</b> Coil R = 50 Ω at 5 V. I = 5/50 = <b>0.1 A</b> = 100 mA, which exceeds the 40 mA absolute maximum of an ATmega328P pin, so a driver (ULN2003 rated 500 mA) is mandatory. With two coils on, supply current ≈ 200 mA, P = 5 V × 0.2 A = 1 W.</div></section>
+
+<section id="gate"><h2>8. GATE preparation: interactive quiz (10 original questions)</h2>
+<p>These are original GATE-style questions, not previous-year questions. Answers and explanations appear after you check.</p><div id="gq"></div>
+<button onclick="chk('g')">Check answers</button><button class="s" onclick="rst('g')">Reset</button><div class="score" id="gs"></div>
+<h3>High-frequency GATE topics</h3><p>Steps/rev ↔ step angle, RPM–frequency conversion, microstepping resolution, driver and back-EMF protection, polling vs interrupt, real-time constraints, timer/PWM calculations.</p></section>
+
+<section id="intv"><h2>9. Core-company interview preparation</h2><div id="iv"></div>
+<div class="card key"><b>Industry perspective:</b> in real projects the Arduino-class prototype is replaced by an MCU (STM32, PIC, NXP) with a dedicated stepper driver IC, timer-generated pulses with acceleration ramps, current limiting, and validation on a hardware-in-the-loop bench.</div></section>
+
+<section id="app"><h2>10. Applications and industry relevance</h2>
+<div class="tw"><table><tr><th>Area</th><th>Use of stepper / embedded control</th></tr><tr><td>3D printers, CNC</td><td>Axis positioning with microstepping drivers</td></tr><tr><td>Medical</td><td>Syringe and infusion pumps, analyser sample handling</td></tr><tr><td>Automotive</td><td>Instrument-cluster needles, HVAC flap actuators</td></tr><tr><td>Consumer/office</td><td>Printers, scanners, camera autofocus</td></tr><tr><td>Industrial</td><td>Valve control, conveyor indexing</td></tr></table></div>
+<p><b>Advantages:</b> low-cost open-loop positioning, high holding torque, digital interface. <b>Limitations:</b> missed steps without feedback, resonance, heat at standstill, torque drop at speed. <b>Challenges:</b> mid-band resonance, supply sag, noise on logic lines. <b>Roles:</b> firmware engineer, embedded systems engineer, hardware validation, motor-control and automation engineer.</p></section>
+
+<section id="quiz"><h2>11. Topic quiz (10 questions)</h2><div id="tq"></div>
+<button onclick="chk('t')">Check answers</button><button class="s" onclick="rst('t')">Reset quiz</button><div class="score" id="ts"></div></section>
+
+<section id="rev"><h2>12. Revision materials</h2>
+<div class="card key"><b>Formula sheet:</b> θ<sub>s</sub> = 360°/N · RPM = 60f/N · t<sub>d</sub> = 1/f · N<sub>eff</sub> = N·m · I = V/R.</div>
+<div class="tw"><table><tr><th>Compare</th><th>Stepper</th><th>DC motor</th><th>Servo</th></tr><tr><td>Control</td><td>Open loop</td><td>Needs feedback for position</td><td>Closed loop</td></tr><tr><td>Position accuracy</td><td>Good, no sensor</td><td>Poor without encoder</td><td>Excellent</td></tr><tr><td>Torque at speed</td><td>Falls quickly</td><td>Good</td><td>Good</td></tr><tr><td>Cost/complexity</td><td>Low</td><td>Low</td><td>Higher</td></tr></table></div>
+<div class="tw"><table><tr><th>Symptom</th><th>Likely cause / fix</th></tr><tr><td>Motor buzzes, no rotation</td><td>Wrong pin order (use 8,10,9,11) or delay too short</td></tr><tr><td>Random resets</td><td>Motor powered from Arduino 5 V; use external supply</td></tr><tr><td>Skipped steps</td><td>Speed too high, supply too weak; add ramp</td></tr><tr><td>Driver/motor hot</td><td>Coils left energised at standstill; de-energise when idle</td></tr><tr><td>Erratic behaviour</td><td>Missing common ground</td></tr></table></div>
+<p><b>Memory aid:</b> “RPM equals sixty f over N.” <b>Interview points:</b> why a driver, why flyback, open-loop meaning, microstepping trade-off, watchdog, interrupt vs polling.</p></section>
+</main>
+<script>
+const G=[["Which feature best distinguishes an embedded system from a general-purpose PC?",["Has a display","Dedicated function with real-time/resource constraints","Uses a 32-bit CPU","Runs only C code"],1,"Embedded systems are task-specific and constrained; the other options are not defining.","Easy"],
+["A stepper has a 1.8° step angle. Steps per revolution?",["100","180","200","360"],2,"N = 360/1.8 = 200.","Easy"],
+["A 200-step motor is driven at 1000 full steps/s. Speed in RPM?",["200","300","600","1000"],1,"RPM = 1000 × 60 / 200 = 300. Trap: forgetting the factor 60 gives 5.","Moderate"],
+["Half-stepping a 1.8° motor gives a step angle of:",["3.6°","1.8°","0.9°","0.45°"],2,"Half-stepping doubles steps per rev (400), so 0.9°.","Easy"],
+["The flyback diode across an inductive load protects against:",["Overheating of the rotor","Voltage spike when current is switched off","Reverse polarity of the supply only","Logic-level mismatch"],1,"Interrupting inductor current produces v = L·di/dt, clamped by the diode.","Easy"],
+["A coil is 5 V, 50 Ω. An ATmega328P pin is limited to 40 mA absolute max. What is required to drive it?",["Direct connection","A 100 Ω series resistor only","A transistor/Darlington driver","A capacitor on the pin"],2,"I = 100 mA > 40 mA, so a driver (e.g. ULN2003) must supply the current; a series resistor would cut torque and still exceed limits.","Moderate"],
+["28BYJ-48 (2048 steps/rev) must run at 15 RPM. Delay between steps?",["1.95 ms","2.93 ms","5.86 ms","0.49 ms"],0,"f = 15 × 2048/60 = 512 Hz; t = 1/512 = 1.953 ms.","Moderate"],
+["Why does a stepper lose steps at very high pulse rates?",["Rotor magnets weaken instantly","Coil current cannot rise fast enough (L/R), so torque drops below load","The Arduino clock stops","Back-EMF is zero"],1,"Finite τ = L/R limits current and torque at high speed; also back-EMF grows with speed.","Difficult"],
+["A 1.8° motor with 1/16 microstepping: step angle?",["0.1125°","0.225°","0.45°","0.0562°"],0,"360°/(200×16) = 0.1125°. Trap: micro-step torque is lower than full-step torque.","Moderate"],
+["In open-loop stepper control, which statement is correct?",["Position error accumulates every step","Position is known by counting pulses if no step is lost","Encoder feedback is mandatory","Speed is set by supply voltage"],1,"Without lost steps, position = pulse count × step angle; errors arise only from missed steps.","Difficult"]];
+const T=[["Which is NOT typically an embedded system?",["Microwave oven controller","Car ABS unit","General-purpose desktop PC","Digital thermostat"],2,"A desktop PC is general-purpose.",""],
+["The microcontroller on Arduino Uno is:",["ATmega328P","ESP32","STM32F4","8051"],0,"Uno uses the ATmega328P.",""],
+["ULN2003 consists of:",["7 Darlington transistor pairs","7 op-amps","7 MOSFET H-bridges","7 optocouplers"],0,"It is a Darlington array with clamp diodes.",""],
+["Which library ships with the Arduino IDE for basic stepper control?",["Servo.h only","Wire.h","Stepper.h","SPI.h"],2,"Stepper.h provides step() and setSpeed().",""],
+["A unipolar stepper has:",["Centre-tapped windings","One coil only","No windings","Permanent 3-phase star"],0,"Centre-taps allow current in one direction per half-winding.",""],
+["Increasing the delay between steps will:",["Increase speed","Decrease speed","Not affect speed","Increase steps per rev"],1,"f = 1/delay, so speed falls.",""],
+["Why must the external motor supply ground be tied to Arduino ground?",["For common logic reference","To increase torque","To reduce steps","It is not needed"],0,"Logic signals are measured relative to a shared ground.",""],
+["Compared with wave drive, two-coil full-step drive gives:",["Less torque","More torque","No torque","Same torque and half current"],1,"Two energised coils create a stronger field.",""],
+["A watchdog timer is used to:",["Increase clock speed","Reset the system if firmware hangs","Measure temperature","Filter ADC noise"],1,"Software must periodically clear it; otherwise it resets the MCU.",""],
+["A real-time system is one where:",["Correctness depends on meeting timing deadlines","It has a clock display","It uses Wi-Fi","It is always fastest"],0,"Results must be correct and on time.",""]];
+const I=[["What is an embedded system?","A processor-based system with dedicated firmware inside a product, working under real-time and resource constraints. Follow-up: how does it differ from a PC? Dedicated, constrained, no general OS in many cases."],
+["Why can't you connect a stepper directly to an Arduino pin?","Pins source about 20 mA recommended (40 mA max); coils need ~100 mA+ and are inductive. Use a Darlington/MOSFET/H-bridge driver."],
+["Why is a flyback diode required?","Switching off an inductor produces a spike v = L·di/dt that can destroy the switch; the diode gives the current a safe path."],
+["Full-step vs half-step vs microstep?","Full: two coils, max torque. Half: doubles resolution. Microstep: sinusoidal coil currents for finest resolution and smoother motion, with lower incremental torque."],
+["Motor vibrates but does not turn. Debug?","Check coil wiring order and sequence, step delay (too fast), supply voltage/current, common ground, and swapped IN2/IN3 in the library call."],
+["How do you set speed and position?","Speed = pulse rate: RPM = 60f/N. Position = pulse count × step angle."],
+["Polling vs interrupts for step timing?","Polling with delay() blocks the CPU and adds jitter. Use a timer ISR for deterministic pulses and keep the ISR short."],
+["Lab question: how would you measure missed steps?","Mark the shaft or use an encoder/hall sensor; command N steps and compare actual rotation; scope the driver outputs for correct sequence."],
+["How do you reduce resonance and noise?","Use microstepping, acceleration ramps, damping, avoiding mid-band speeds, and proper decoupling."],
+["Design: 3D-printer axis requirement 0.01 mm per step. Your approach?","Compute steps/mm from motor N, microstep m, and pulley/lead; choose driver (A4988/TMC) and timer-based pulse generator with trapezoidal acceleration; validate with a dial indicator."]];
+function render(id,Q,pre){const d=document.getElementById(id);d.innerHTML=Q.map((q,i)=>`<div class="q" id="${pre}${i}"><b>Q${i+1}.</b> ${q[0]}${q[4]?`<span class="tag">${q[4]}</span>`:''}${q[1].map((o,j)=>`<label><input type="radio" name="${pre}${i}" value="${j}"> ${'ABCD'[j]}. ${o}</label>`).join('')}<div class="exp"></div></div>`).join('')}
+render('gq',G,'g');render('tq',T,'t');
+document.getElementById('iv').innerHTML=I.map((x,i)=>`<details><summary>Q${i+1}. ${x[0]}</summary><p>${x[1]}</p></details>`).join('');
+function chk(p){const Q=p=='g'?G:T;let s=0,u=0;Q.forEach((q,i)=>{const el=document.getElementById(p+i),r=el.querySelector('input:checked');el.className='q';let m;
+if(!r){u++;el.classList.add('u');m='Unanswered. '}else if(+r.value==q[2]){s++;el.classList.add('c');m='Correct. '}else{el.classList.add('w');m='Incorrect. '}
+el.querySelector('.exp').innerHTML=`<b>${m}Answer: ${'ABCD'[q[2]]}.</b> ${q[3]}`});
+document.getElementById(p+'s').textContent=`Score: ${s}/10 (${s*10}%). Unanswered: ${u}.`}
+function rst(p){const Q=p=='g'?G:T;Q.forEach((q,i)=>{const el=document.getElementById(p+i);el.className='q';el.querySelector('.exp').innerHTML='';el.querySelectorAll('input').forEach(x=>x.checked=false)});document.getElementById(p+'s').textContent=''}
+function calc(){const N=+document.getElementById('cN').value,R=+document.getElementById('cR').value;if(!(N>0)||!(R>0)){cOut.textContent='Enter positive values.';return}const f=R*N/60;cOut.innerHTML=`f<sub>step</sub> = ${f.toFixed(2)} steps/s; delay = ${(1000/f).toFixed(3)} ms; step angle = ${(360/N).toFixed(4)}°`}
+(function(){const P=[[1,1,0,0],[0,1,1,0],[0,0,1,1],[1,0,0,1]],w=70,x0=70;let h='';
+for(let k=0;k<4;k++){const y=30+k*55;h+=`<text x="10" y="${y+14}">IN${k+1}</text><polyline fill="none" stroke="#0b6e68" stroke-width="2" points="`;let pts=[];
+for(let s=0;s<8;s++){const v=P[s%4][k],yy=v?y:y+30;pts.push(`${x0+s*w},${yy}`,`${x0+(s+1)*w},${yy}`)}
+h+=pts.join(' ')+'"/>'}
+for(let s=0;s<=8;s++)h+=`<line x1="${x0+s*w}" y1="20" x2="${x0+s*w}" y2="240" stroke="#ccc" stroke-dasharray="3"/>`+(s<8?`<text x="${x0+s*w+28}" y="255">${s+1}</text>`:'');
+document.getElementById('wf').innerHTML=h})();
+</script></body></html>
